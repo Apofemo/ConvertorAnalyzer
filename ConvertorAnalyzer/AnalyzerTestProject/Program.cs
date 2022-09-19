@@ -8,7 +8,7 @@ public static class Program
         var to = new ConvertTo();
 
         var test = new Test();
-        test.TestScenario(from, to);
+        //test.TestScenario(from, to);
     }
 }
 
@@ -26,14 +26,14 @@ public class ConvertTo
 
 public abstract class Converter<TFrom, TTo>
 {
-    public abstract void TestScenario(TFrom expected, TTo tested);
+    //public abstract void TestScenario(TFrom expected, TTo tested);
 }
 
 public class Test : Converter<ConvertFrom, ConvertTo>
 {
-    public override void TestScenario(ConvertFrom expected, ConvertTo tested)
-    {
-        Console.WriteLine(expected.IntProp + " -> " + tested.IntProp + "\n");
-        Console.WriteLine(expected.StringProp + " -> " + tested.StringProp);
-    }
+    //public override void TestScenario(ConvertFrom expected, ConvertTo tested)
+    //{
+    //    Console.WriteLine(expected.IntProp + " -> " + tested.IntProp + "\n");
+    //    Console.WriteLine(expected.StringProp + " -> " + tested.StringProp);
+    //}
 }

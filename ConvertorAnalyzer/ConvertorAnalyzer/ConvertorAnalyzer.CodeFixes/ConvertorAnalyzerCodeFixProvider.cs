@@ -86,34 +86,31 @@ namespace ConvertorAnalyzer
             var fromProps = arguments[0].GetProperties();
             var toProps = arguments[1].GetProperties();
 
-            result.AppendLine("[Test]");
-            result.AppendLine("public void TestCase()");
             result.AppendLine("{");
+            result.AppendLine("\t[Test]");
+            result.AppendLine("\tpublic void TestCase()");
+            result.AppendLine("\t{");
 
             for (int i = 0; i < arguments.Count; i++)
             {
-                result.AppendLine($"\tAssert.That(tested.{toProps[i].Name}, Is.EqualTo({fromProps[i].Name});");
+                result.AppendLine($"\t\tAssert.That(tested.{toProps[i].Name}, Is.EqualTo({fromProps[i].Name});");
             }
 
+            result.AppendLine("\t}");
             result.AppendLine("}");
 
             var newTree = CSharpSyntaxTree.ParseText(result.ToString());
 
+            var newNode = newTree
+                .GetRoot()
+                .DescendantNodesAndSelf()
+                .FirstOrDefault(node => node is BlockSyntax);
+
             var editor = await DocumentEditor.CreateAsync(document);
 
-            var aaa = newTree.GetRoot().DescendantNodes().First();
-            //var tst = editor.OriginalRoot.DescendantNodes().First();
-            var chaged = editor.GetChangedDocument();
-            var aasd = editor.GetChangedRoot().NormalizeWhitespace().ToFullString();
-            editor.ReplaceNode(codeBlock, newTree.GetRoot());
-
-
-            //var trree = root.ReplaceNode(codeBlock, );
+            editor.ReplaceNode(codeBlock, newNode);
 
             return editor.GetChangedDocument();
-            return default;
-            //return newSolution;
-            // Return the new solution with the now-uppercase type name.
         }
     }
 }
