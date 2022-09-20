@@ -61,7 +61,7 @@ namespace ConvertorAnalyzer {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Initialize asserts.
+        ///   Looks up a localized string similar to Generate asserts.
         /// </summary>
         internal static string AnalyzerDescription {
             get {
@@ -70,7 +70,7 @@ namespace ConvertorAnalyzer {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to I wanna help you!.
+        ///   Looks up a localized string similar to Generate asserts.
         /// </summary>
         internal static string AnalyzerMessageFormat {
             get {
@@ -79,7 +79,7 @@ namespace ConvertorAnalyzer {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to I wanna help you! (AnalyzerTitle).
+        ///   Looks up a localized string similar to Generate asserts.
         /// </summary>
         internal static string AnalyzerTitle {
             get {

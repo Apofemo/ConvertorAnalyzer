@@ -18,9 +18,9 @@ namespace ConvertorAnalyzer
         private static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.AnalyzerDescription), Resources.ResourceManager, typeof(Resources));
         private const string Category = "Naming";
 
-        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
+        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Info, isEnabledByDefault: true, description: Description);
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics 
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
             => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
@@ -34,7 +34,38 @@ namespace ConvertorAnalyzer
 
                 foreach (var statement in root.DescendantNodes().OfType<GenericNameSyntax>())
                 {
-                    var diagnostic = Diagnostic.Create(Rule, statement.GetFirstToken().GetLocation());
+                    var argumentsNode = statement.DescendantNodes()
+                            .FirstOrDefault(node => node is TypeArgumentListSyntax)
+                            as TypeArgumentListSyntax;
+
+                    if (argumentsNode == null || argumentsNode.Arguments.Count != 2)
+                        continue;
+
+                    var genericName = statement
+                        .Identifier
+                        .Text
+                        .ToLower();
+
+                    var parentNode = statement
+                            .Parent
+                            .Parent
+                            .Parent
+                            .DescendantNodesAndSelf()
+                            .FirstOrDefault(node => node is ClassDeclarationSyntax)
+                        as ClassDeclarationSyntax;
+
+                    if (parentNode == null || !genericName.Contains("converter"))
+                        continue;
+
+                    var hasTestAttribute = parentNode.Members
+                        .Any(member => member.AttributeLists
+                            .SelectMany(attributeList => attributeList.Attributes
+                                .Select(attribute => attribute.Name.ToString())).Contains("Test"));
+
+                    if (hasTestAttribute)
+                        continue;
+
+                    var diagnostic = Diagnostic.Create(Rule, argumentsNode.GetLocation());
                     syntaxTreeContext.ReportDiagnostic(diagnostic);
                 }
             });
