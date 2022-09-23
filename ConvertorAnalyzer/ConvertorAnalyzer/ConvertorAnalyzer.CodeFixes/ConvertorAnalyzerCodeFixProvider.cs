@@ -80,7 +80,7 @@ namespace ConvertorAnalyzer
             {
                 case IdentifierNameSyntax _:
                     fromClassName = ((IdentifierNameSyntax)statement.Arguments[0]).Identifier.Text;
-                    fromPropNames = await GetProps(semanticModel, statement.Arguments[0]);
+                    fromPropNames = await GetCsProps(semanticModel, statement.Arguments[0]);
                     break;
                 case QualifiedNameSyntax _:
                     fromClassName = statement.Arguments[0].ToFullString();
@@ -92,7 +92,7 @@ namespace ConvertorAnalyzer
             {
                 case IdentifierNameSyntax _:
                     toClassName = ((IdentifierNameSyntax)statement.Arguments[1]).Identifier.Text;
-                    toPropNames = await GetProps(semanticModel, statement.Arguments[1]);
+                    toPropNames = await GetCsProps(semanticModel, statement.Arguments[1]);
                     break;
                 case QualifiedNameSyntax _:
                     toClassName = statement.Arguments[1].ToFullString();
@@ -170,7 +170,7 @@ namespace ConvertorAnalyzer
             return editor.GetChangedDocument();
         }
 
-        private static async Task<List<string>> GetProps(SemanticModel semanticModel, TypeSyntax type)
+        private static async Task<List<string>> GetCsProps(SemanticModel semanticModel, TypeSyntax type)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(type);
 
