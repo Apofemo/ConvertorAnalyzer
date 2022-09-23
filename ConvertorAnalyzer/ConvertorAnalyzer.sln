@@ -3,17 +3,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32901.215
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertorAnalyzer", "ConvertorAnalyzer\ConvertorAnalyzer\ConvertorAnalyzer.csproj", "{8DCCCBB5-5030-401E-BD1B-D1D706B410B1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConvertorAnalyzer", "ConvertorAnalyzer\ConvertorAnalyzer\ConvertorAnalyzer.csproj", "{8DCCCBB5-5030-401E-BD1B-D1D706B410B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertorAnalyzer.CodeFixes", "ConvertorAnalyzer\ConvertorAnalyzer.CodeFixes\ConvertorAnalyzer.CodeFixes.csproj", "{DF57E497-BC20-430F-9CBF-5FBE302CDD5C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConvertorAnalyzer.CodeFixes", "ConvertorAnalyzer\ConvertorAnalyzer.CodeFixes\ConvertorAnalyzer.CodeFixes.csproj", "{DF57E497-BC20-430F-9CBF-5FBE302CDD5C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertorAnalyzer.Package", "ConvertorAnalyzer\ConvertorAnalyzer.Package\ConvertorAnalyzer.Package.csproj", "{BFAD7192-B983-4810-A8E4-E5827F6C1D3A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConvertorAnalyzer.Package", "ConvertorAnalyzer\ConvertorAnalyzer.Package\ConvertorAnalyzer.Package.csproj", "{BFAD7192-B983-4810-A8E4-E5827F6C1D3A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertorAnalyzer.Test", "ConvertorAnalyzer\ConvertorAnalyzer.Test\ConvertorAnalyzer.Test.csproj", "{17982F6C-91C1-4273-97B9-7579C948CFB2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConvertorAnalyzer.Test", "ConvertorAnalyzer\ConvertorAnalyzer.Test\ConvertorAnalyzer.Test.csproj", "{17982F6C-91C1-4273-97B9-7579C948CFB2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertorAnalyzer.Vsix", "ConvertorAnalyzer\ConvertorAnalyzer.Vsix\ConvertorAnalyzer.Vsix.csproj", "{6D5FDC8E-9D3C-45FF-9393-F25C0536D271}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConvertorAnalyzer.Vsix", "ConvertorAnalyzer\ConvertorAnalyzer.Vsix\ConvertorAnalyzer.Vsix.csproj", "{6D5FDC8E-9D3C-45FF-9393-F25C0536D271}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnalyzerTestProject", "AnalyzerTestProject\AnalyzerTestProject.csproj", "{D6205AB0-3AA9-488B-83C5-E237E3959C80}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnalyzerTestProject", "AnalyzerTestProject\AnalyzerTestProject.csproj", "{D6205AB0-3AA9-488B-83C5-E237E3959C80}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Shared", "Shared\Shared.fsproj", "{6C7A84B5-33CA-49DE-A86D-F0796F382AC7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{D6205AB0-3AA9-488B-83C5-E237E3959C80}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D6205AB0-3AA9-488B-83C5-E237E3959C80}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D6205AB0-3AA9-488B-83C5-E237E3959C80}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C7A84B5-33CA-49DE-A86D-F0796F382AC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C7A84B5-33CA-49DE-A86D-F0796F382AC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C7A84B5-33CA-49DE-A86D-F0796F382AC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C7A84B5-33CA-49DE-A86D-F0796F382AC7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

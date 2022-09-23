@@ -70,10 +70,37 @@ namespace ConvertorAnalyzer
             if (semanticModel == null || statement.Arguments.Count != 2)
                 return null;
 
-            var (fromClass, fromProps) = await GetIdentifierAndProps(semanticModel, statement.Arguments[0]);
-            var (toClass, toProps) = await GetIdentifierAndProps(semanticModel, statement.Arguments[1]);
+            var fromClassName = string.Empty;
+            var fromPropNames = new List<string>();
 
-            if (fromClass == null || fromProps == null || toClass == null || toProps == null)
+            var toClassName = string.Empty;
+            var toPropNames = new List<string>();
+
+            switch (statement.Arguments[0])
+            {
+                case IdentifierNameSyntax _:
+                    fromClassName = ((IdentifierNameSyntax)statement.Arguments[0]).Identifier.Text;
+                    fromPropNames = await GetProps(semanticModel, statement.Arguments[0]);
+                    break;
+                case QualifiedNameSyntax _:
+                    fromClassName = statement.Arguments[0].ToFullString();
+                    fromPropNames = GetFsProps(semanticModel, ((QualifiedNameSyntax)statement.Arguments[0]).Right);
+                    break;
+            }
+
+            switch (statement.Arguments[1])
+            {
+                case IdentifierNameSyntax _:
+                    toClassName = ((IdentifierNameSyntax)statement.Arguments[1]).Identifier.Text;
+                    toPropNames = await GetProps(semanticModel, statement.Arguments[1]);
+                    break;
+                case QualifiedNameSyntax _:
+                    toClassName = statement.Arguments[1].ToFullString();
+                    toPropNames = GetFsProps(semanticModel, statement.Arguments[1]);
+                    break;
+            }
+
+            if (string.IsNullOrWhiteSpace(fromClassName) || string.IsNullOrWhiteSpace(toClassName))
                 return null;
 
             var newTree = SyntaxFactory.CompilationUnit()
@@ -94,9 +121,9 @@ namespace ConvertorAnalyzer
                                                         SyntaxFactory.SeparatedList<TypeSyntax>(
                                                             new SyntaxNodeOrToken[]
                                                             {
-                                                                SyntaxFactory.IdentifierName(fromClass),
+                                                                SyntaxFactory.IdentifierName(fromClassName),
                                                                 SyntaxFactory.Token(SyntaxKind.CommaToken),
-                                                                SyntaxFactory.IdentifierName(toClass)
+                                                                SyntaxFactory.IdentifierName(toClassName)
                                                             })))))))
                             .WithMembers(
                                 SyntaxFactory.SingletonList<MemberDeclarationSyntax>(
@@ -116,15 +143,15 @@ namespace ConvertorAnalyzer
                                                         SyntaxFactory.Parameter(
                                                                 SyntaxFactory.Identifier("expected"))
                                                             .WithType(
-                                                                SyntaxFactory.IdentifierName(fromClass)),
+                                                                SyntaxFactory.IdentifierName(fromClassName)),
                                                         SyntaxFactory.Token(SyntaxKind.CommaToken),
                                                         SyntaxFactory.Parameter(
                                                                 SyntaxFactory.Identifier("tested"))
                                                             .WithType(
-                                                                SyntaxFactory.IdentifierName(toClass))
+                                                                SyntaxFactory.IdentifierName(toClassName))
                                                     })))
                                         .WithBody(
-                                            SyntaxFactory.Block(GetAssertBlockSyntax(fromProps, toProps)))))))
+                                            SyntaxFactory.Block(GetAssertBlockSyntax(fromPropNames, toPropNames)))))))
                 .NormalizeWhitespace();
 
             var newNode = (await newTree
@@ -143,7 +170,7 @@ namespace ConvertorAnalyzer
             return editor.GetChangedDocument();
         }
 
-        private static async Task<(string, List<string>)> GetIdentifierAndProps(SemanticModel semanticModel, TypeSyntax type)
+        private static async Task<List<string>> GetProps(SemanticModel semanticModel, TypeSyntax type)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(type);
 
@@ -177,7 +204,7 @@ namespace ConvertorAnalyzer
                     .Select(property => property.Identifier.Text)
                     .ToList();
 
-                return (recordDeclarationSyntax.Identifier.Text, recordResult);
+                return recordResult;
             }
 
             var classPropertyDeclaration = classDeclarationSyntax
@@ -188,7 +215,28 @@ namespace ConvertorAnalyzer
                 .Select(property => property.Identifier.Text)
                 .ToList();
 
-            return (classDeclarationSyntax.Identifier.Text, classResult);
+            return classResult;
+        }
+
+        private static List<string> GetFsProps(SemanticModel semanticModel, TypeSyntax type)
+        {
+            var symbolInfo = semanticModel.GetSymbolInfo(type);
+
+            if (symbolInfo.Symbol == null)
+                return default;
+
+            var memberNames = ((INamedTypeSymbol)symbolInfo.Symbol)
+                .MemberNames
+                .Where(n => !n.Contains("get_")
+                            && !n.Contains("@")
+                            && n != ".ctor"
+                            && n != "ToString"
+                            && n != "CompareTo"
+                            && n != "GetHashCode"
+                            && n != "Equals")
+                .ToList();
+
+            return memberNames;
         }
 
         private static IEnumerable<StatementSyntax> GetAssertBlockSyntax(List<string> fromProps, List<string> toProps)

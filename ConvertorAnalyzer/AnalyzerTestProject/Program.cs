@@ -1,4 +1,8 @@
-﻿using NUnit.Framework;
+﻿using AnalyzerTestProject.Shared;
+using Microsoft.VisualBasic;
+using NUnit.Framework;
+
+namespace AnalyzerTestProject;
 
 public static class Program
 {
@@ -7,7 +11,6 @@ public static class Program
         var from = new ConvertFrom();
         var to = new ConvertTo();
 
-        var test = new Test();
         //test.TestScenario(from, to);
     }
 }
@@ -29,7 +32,9 @@ public class ConvertTo
     public string CaseSens { get; set; } = "CaseSens";
     public string ContainsFromContains { get; set; } = "ContainsFromContains";
     public string ContainsTo { get; set; } = "ContainsTo";
-    public string MismatchTo { get; set; } = "MismatchTo";
+    public string MismatchTo { get; set; } = "MismatchTo"; 
+    public string Prop { get; set; } = "Prop";
+    public string Prop3 { get; set; } = "Prop3";
 }
 
 public abstract class Converter<TFrom, TTo>
@@ -37,11 +42,11 @@ public abstract class Converter<TFrom, TTo>
     //public abstract void TestScenario(TFrom expected, TTo tested);
 }
 
-public class Test : Converter<ConvertFrom, ConvertTo>
+public class Test1 : Converter<ConvertFrom, ConvertTo>
 {
-    public void TestScenarioo(ConvertFrom expected, ConvertTo tested)
-    {
-        Console.WriteLine(expected.IntProp + " -> " + tested.IntProp + "\n");
-        Console.WriteLine(expected.StringProp + " -> " + tested.StringProp);
-    }
+
+}
+public class Test2 : Converter<Msg.PhoneCall, ConvertTo>
+{
+
 }
