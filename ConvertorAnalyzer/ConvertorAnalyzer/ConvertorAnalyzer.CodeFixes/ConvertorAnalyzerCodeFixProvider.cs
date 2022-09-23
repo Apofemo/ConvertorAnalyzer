@@ -31,12 +31,7 @@ namespace ConvertorAnalyzer
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
 
-            // TODO: Replace the following code with your own analysis, generating a CodeAction for each fix to suggest
             var diagnostic = context.Diagnostics.First();
-            var diagnosticSpan = diagnostic.Location.SourceSpan;
-
-            // Find the type declaration identified by the diagnostic.
-            var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<TypeDeclarationSyntax>().First();
 
             // Register a code action that will invoke the fix.
             context.RegisterCodeFix(
@@ -52,16 +47,19 @@ namespace ConvertorAnalyzer
             var statement = root.FindNode(diagnostic.Location.SourceSpan) as TypeArgumentListSyntax;
 
             if (statement == null)
-                return default;
+                return null;
 
             var nodeToChange = statement
-                .Parent
-                .Parent
-                .Parent
-                .Parent
+                .Parent?
+                .Parent?
+                .Parent?
+                .Parent?
                 .DescendantNodesAndSelf()
-                .FirstOrDefault(node => node is ClassDeclarationSyntax)
+                .FirstOrDefault(node => node is ClassDeclarationSyntax || node is RecordDeclarationSyntax)
                 as ClassDeclarationSyntax;
+
+            if (nodeToChange == null)
+                return null;
 
             var genericName = ((GenericNameSyntax)statement.Parent)
                 .Identifier
@@ -69,11 +67,14 @@ namespace ConvertorAnalyzer
 
             var semanticModel = await document.GetSemanticModelAsync();
 
-            if (statement.Arguments.Count != 2)
+            if (semanticModel == null || statement.Arguments.Count != 2)
                 return null;
 
-            var (fromClass, fromProps) = await GetProps(semanticModel, statement.Arguments[0]);
-            var (toClass, toProps) = await GetProps(semanticModel, statement.Arguments[1]);
+            var (fromClass, fromProps) = await GetIdentifierAndProps(semanticModel, statement.Arguments[0]);
+            var (toClass, toProps) = await GetIdentifierAndProps(semanticModel, statement.Arguments[1]);
+
+            if (fromClass == null || fromProps == null || toClass == null || toProps == null)
+                return null;
 
             var newTree = SyntaxFactory.CompilationUnit()
                 .WithMembers(
@@ -132,6 +133,9 @@ namespace ConvertorAnalyzer
                 .DescendantNodesAndSelf()
                 .FirstOrDefault(node => node is ClassDeclarationSyntax);
 
+            if (newNode == null)
+                return null;
+
             var editor = await DocumentEditor.CreateAsync(document);
 
             editor.ReplaceNode(nodeToChange, newNode);
@@ -139,29 +143,52 @@ namespace ConvertorAnalyzer
             return editor.GetChangedDocument();
         }
 
-        private static async Task<(string, List<string>)> GetProps(SemanticModel semanticModel, TypeSyntax type)
+        private static async Task<(string, List<string>)> GetIdentifierAndProps(SemanticModel semanticModel, TypeSyntax type)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(type);
 
-            var classDeclaration = await symbolInfo
+            if (symbolInfo.Symbol == null)
+                return default;
+
+            var classDeclarationSyntax = await symbolInfo
                 .Symbol
                 .DeclaringSyntaxReferences
                 .FirstOrDefault()
                 .GetSyntaxAsync()
                 as ClassDeclarationSyntax;
 
-            if (classDeclaration == null)
-                return default;
+            if (classDeclarationSyntax == null)
+            {
+                var recordDeclarationSyntax = await symbolInfo
+                    .Symbol
+                    .DeclaringSyntaxReferences
+                    .FirstOrDefault()
+                    .GetSyntaxAsync()
+                    as RecordDeclarationSyntax;
 
-            var propertyDeclaration = classDeclaration
+                if (recordDeclarationSyntax == null)
+                    return default;
+
+                var recordPropertyDeclaration = recordDeclarationSyntax
+                    .DescendantNodes()
+                    .OfType<PropertyDeclarationSyntax>();
+
+                var recordResult = recordPropertyDeclaration
+                    .Select(property => property.Identifier.Text)
+                    .ToList();
+
+                return (recordDeclarationSyntax.Identifier.Text, recordResult);
+            }
+
+            var classPropertyDeclaration = classDeclarationSyntax
                 .DescendantNodes()
                 .OfType<PropertyDeclarationSyntax>();
 
-            var result = propertyDeclaration
+            var classResult = classPropertyDeclaration
                 .Select(property => property.Identifier.Text)
                 .ToList();
 
-            return (classDeclaration.Identifier.Text, result);
+            return (classDeclarationSyntax.Identifier.Text, classResult);
         }
 
         private static IEnumerable<StatementSyntax> GetAssertBlockSyntax(List<string> fromProps, List<string> toProps)

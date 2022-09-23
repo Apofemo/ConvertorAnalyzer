@@ -12,7 +12,7 @@ public static class Program
     }
 }
 
-public class ConvertFrom
+public record ConvertFrom
 {
     public int IntProp { get; set; }
     public string StringProp { get; set; } = "StringProp";

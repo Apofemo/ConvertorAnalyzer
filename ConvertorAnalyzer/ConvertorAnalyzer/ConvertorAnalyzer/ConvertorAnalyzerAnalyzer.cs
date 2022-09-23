@@ -48,17 +48,19 @@ namespace ConvertorAnalyzer
                         .Text
                         .ToLower();
 
+                    if (!genericName.Contains("converter"))
+                        continue;
+
                     var parentNode = statement
-                            .Parent
-                            .Parent
-                            .Parent
+                            .Parent?
+                            .Parent?
+                            .Parent?
                             .DescendantNodesAndSelf()
                             .FirstOrDefault(node => node is ClassDeclarationSyntax)
                         as ClassDeclarationSyntax;
 
-                    if (parentNode == null || !genericName.Contains("converter"))
+                    if (parentNode == null)
                         continue;
-
 
                     var hasCreatedMethod = parentNode.Members
                         .Where(member => member is MethodDeclarationSyntax)
