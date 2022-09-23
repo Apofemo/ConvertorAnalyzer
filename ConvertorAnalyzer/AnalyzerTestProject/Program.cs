@@ -39,8 +39,7 @@ public abstract class Converter<TFrom, TTo>
 
 public class Test : Converter<ConvertFrom, ConvertTo>
 {
-    [Test]
-    public void TestScenario(ConvertFrom expected, ConvertTo tested)
+    public void TestScenarioo(ConvertFrom expected, ConvertTo tested)
     {
         Console.WriteLine(expected.IntProp + " -> " + tested.IntProp + "\n");
         Console.WriteLine(expected.StringProp + " -> " + tested.StringProp);

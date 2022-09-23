@@ -81,7 +81,7 @@ namespace ConvertorAnalyzer
                         SyntaxFactory.ClassDeclaration(nodeToChange.Identifier.Text)
                             .WithModifiers(
                                 SyntaxFactory.TokenList(
-                                    SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+                                    nodeToChange.Modifiers))
                             .WithBaseList(
                                 SyntaxFactory.BaseList(
                                     SyntaxFactory.SingletonSeparatedList<BaseTypeSyntax>(
@@ -102,16 +102,11 @@ namespace ConvertorAnalyzer
                                     SyntaxFactory.MethodDeclaration(
                                             SyntaxFactory.PredefinedType(
                                                 SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
-                                            SyntaxFactory.Identifier("TestScenario"))
-                                        .WithAttributeLists(
-                                            SyntaxFactory.SingletonList(
-                                                SyntaxFactory.AttributeList(
-                                                    SyntaxFactory.SingletonSeparatedList(
-                                                        SyntaxFactory.Attribute(
-                                                            SyntaxFactory.IdentifierName("Test"))))))
+                                            SyntaxFactory.Identifier(ConvertorAnalyzerAnalyzer.MethodName))
                                         .WithModifiers(
                                             SyntaxFactory.TokenList(
-                                                SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+                                                SyntaxFactory.Token(SyntaxKind.PublicKeyword),
+                                                SyntaxFactory.Token(SyntaxKind.OverrideKeyword)))
                                         .WithParameterList(
                                             SyntaxFactory.ParameterList(
                                                 SyntaxFactory.SeparatedList<ParameterSyntax>(
@@ -179,14 +174,14 @@ namespace ConvertorAnalyzer
 
             foreach (var from in fromProps)
             {
-                var to = toProps.FirstOrDefault(x => x.Equals(from, StringComparison.OrdinalIgnoreCase))
-                    ?? toProps.FirstOrDefault(t => t.IndexOf(from, StringComparison.OrdinalIgnoreCase) > -1
-                                                || from.IndexOf(t, StringComparison.OrdinalIgnoreCase) > -1);
-
-                toProps.Remove(to);
+                var to = toProps.FirstOrDefault(toProp => toProp.Equals(from, StringComparison.OrdinalIgnoreCase))
+                         ?? toProps.FirstOrDefault(toProp => toProp.IndexOf(from, StringComparison.OrdinalIgnoreCase) > -1
+                                                             || from.IndexOf(toProp, StringComparison.OrdinalIgnoreCase) > -1);
 
                 if (to == null)
                     to = "/*unexpected mismatch*/";
+                else
+                    toProps.Remove(to);
 
                 result.Add(SyntaxFactory.ExpressionStatement(
                             SyntaxFactory.InvocationExpression(
@@ -224,7 +219,7 @@ namespace ConvertorAnalyzer
 
             if (toProps.Any())
             {
-                foreach (var to in toProps)
+                foreach (var toProp in toProps)
                 {
                     result.Add(SyntaxFactory.ExpressionStatement(
                             SyntaxFactory.InvocationExpression(
@@ -240,7 +235,7 @@ namespace ConvertorAnalyzer
                                             SyntaxFactory.MemberAccessExpression(
                                                 SyntaxKind.SimpleMemberAccessExpression,
                                                 SyntaxFactory.IdentifierName("tested"),
-                                                SyntaxFactory.IdentifierName(to))),
+                                                SyntaxFactory.IdentifierName(toProp))),
                                         SyntaxFactory.Token(SyntaxKind.CommaToken),
                                         SyntaxFactory.Argument(
                                             SyntaxFactory.InvocationExpression(
