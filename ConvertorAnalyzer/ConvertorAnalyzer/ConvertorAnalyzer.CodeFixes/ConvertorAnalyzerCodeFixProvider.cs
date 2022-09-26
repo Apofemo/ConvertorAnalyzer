@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ConvertorAnalyzer
@@ -37,12 +38,12 @@ namespace ConvertorAnalyzer
             context.RegisterCodeFix(
                 CodeAction.Create(
                     title: CodeFixResources.CodeFixTitle,
-                    createChangedDocument: c => GenerateAsserts(context.Document, diagnostic, root),
+                    createChangedDocument: c => GenerateAsserts(context.Document, diagnostic, root, c),
                     equivalenceKey: nameof(CodeFixResources.CodeFixTitle)),
                 diagnostic);
         }
 
-        private async Task<Document> GenerateAsserts(Document document, Diagnostic diagnostic, SyntaxNode root)
+        private async Task<Document> GenerateAsserts(Document document, Diagnostic diagnostic, SyntaxNode root, CancellationToken cancellationToken)
         {
             var statement = root.FindNode(diagnostic.Location.SourceSpan) as TypeArgumentListSyntax;
 
@@ -62,7 +63,7 @@ namespace ConvertorAnalyzer
                 .Identifier
                 .Text;
 
-            var semanticModel = await document.GetSemanticModelAsync();
+            var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 
             if (semanticModel == null || statement.Arguments.Count != 2)
                 return null;
@@ -77,7 +78,7 @@ namespace ConvertorAnalyzer
             {
                 case IdentifierNameSyntax _:
                     fromClassName = ((IdentifierNameSyntax)statement.Arguments[0]).Identifier.Text;
-                    fromPropNames = await GetCsProperties(semanticModel, statement.Arguments[0]);
+                    fromPropNames = await GetCsProperties(semanticModel, statement.Arguments[0], cancellationToken);
                     break;
                 case QualifiedNameSyntax _:
                     fromClassName = statement.Arguments[0].ToFullString();
@@ -89,7 +90,7 @@ namespace ConvertorAnalyzer
             {
                 case IdentifierNameSyntax _:
                     toClassName = ((IdentifierNameSyntax)statement.Arguments[1]).Identifier.Text;
-                    toPropNames = await GetCsProperties(semanticModel, statement.Arguments[1]);
+                    toPropNames = await GetCsProperties(semanticModel, statement.Arguments[1], cancellationToken);
                     break;
                 case QualifiedNameSyntax _:
                     toClassName = statement.Arguments[1].ToFullString();
@@ -153,7 +154,7 @@ namespace ConvertorAnalyzer
 
             var newNode = (await newTree
                     .SyntaxTree
-                    .GetRootAsync())
+                    .GetRootAsync(cancellationToken))
                 .DescendantNodesAndSelf()
                 .FirstOrDefault(node => node is ClassDeclarationSyntax);
 
@@ -167,9 +168,9 @@ namespace ConvertorAnalyzer
             return editor.GetChangedDocument();
         }
 
-        private static async Task<List<string>> GetCsProperties(SemanticModel semanticModel, TypeSyntax type)
+        private static async Task<List<string>> GetCsProperties(SemanticModel semanticModel, TypeSyntax type, CancellationToken cancellationToken)
         {
-            var symbolInfo = semanticModel.GetSymbolInfo(type);
+            var symbolInfo = semanticModel.GetSymbolInfo(type, cancellationToken);
 
             if (symbolInfo.Symbol == null)
                 return new List<string>();
@@ -183,7 +184,7 @@ namespace ConvertorAnalyzer
                 return new List<string>();
 
             var declarationSyntax = await declarationSyntaxReference
-                .GetSyntaxAsync()
+                .GetSyntaxAsync(cancellationToken)
                 as BaseTypeDeclarationSyntax;
 
             if (declarationSyntax == null)
@@ -205,7 +206,7 @@ namespace ConvertorAnalyzer
 
             if (parentType != null)
             {
-                result.AddRange(await GetCsProperties(semanticModel, parentType));
+                result.AddRange(await GetCsProperties(semanticModel, parentType, cancellationToken));
             }
 
             return result;

@@ -1,6 +1,7 @@
 ﻿using AnalyzerTestProject.Shared;
 using Microsoft.VisualBasic;
 using NUnit.Framework;
+using System.Runtime.Serialization;
 
 namespace AnalyzerTestProject;
 
@@ -43,10 +44,11 @@ public class ConvertToParent : ConvertToParentParent
     public string StringPropParent { get; set; } = "StringProp";
 }
 
-public class ConvertToParentParent : object
+public class ConvertToParentParent : object, System.Runtime.Serialization.IExtensibleDataObject
 {
     public int IntPropParentParent { get; set; }
     public string StringPropParentParent { get; set; } = "StringProp";
+    public ExtensionDataObject? ExtensionData { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 }
 
 public abstract class Converter<TFrom, TTo>
