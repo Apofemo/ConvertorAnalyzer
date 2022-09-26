@@ -172,17 +172,22 @@ namespace ConvertorAnalyzer
             var symbolInfo = semanticModel.GetSymbolInfo(type);
 
             if (symbolInfo.Symbol == null)
-                return default;
+                return new List<string>();
 
-            var declarationSyntax = await symbolInfo
+            var declarationSyntaxReference = symbolInfo
                     .Symbol
                     .DeclaringSyntaxReferences
-                    .FirstOrDefault()
-                    .GetSyntaxAsync()
+                    .FirstOrDefault();
+
+            if (declarationSyntaxReference == null)
+                return new List<string>();
+
+            var declarationSyntax = await declarationSyntaxReference
+                .GetSyntaxAsync()
                 as BaseTypeDeclarationSyntax;
 
             if (declarationSyntax == null)
-                return default;
+                return new List<string>();
 
             var propertyDeclaration = declarationSyntax
                 .DescendantNodes()
@@ -210,7 +215,7 @@ namespace ConvertorAnalyzer
             var symbolInfo = semanticModel.GetSymbolInfo(type);
 
             if (symbolInfo.Symbol == null)
-                return default;
+                return new List<string>();
 
             var memberNames = ((INamedTypeSymbol)symbolInfo.Symbol)
                 .MemberNames

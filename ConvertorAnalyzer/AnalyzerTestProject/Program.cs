@@ -43,7 +43,7 @@ public class ConvertToParent : ConvertToParentParent
     public string StringPropParent { get; set; } = "StringProp";
 }
 
-public class ConvertToParentParent
+public class ConvertToParentParent : object
 {
     public int IntPropParentParent { get; set; }
     public string StringPropParentParent { get; set; } = "StringProp";
