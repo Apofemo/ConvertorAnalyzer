@@ -161,7 +161,7 @@ namespace ConvertorAnalyzer
             if (newNode == null)
                 return null;
 
-            var editor = await DocumentEditor.CreateAsync(document);
+            var editor = await DocumentEditor.CreateAsync(document, cancellationToken);
 
             editor.ReplaceNode(nodeToChange, newNode);
 
@@ -170,7 +170,9 @@ namespace ConvertorAnalyzer
 
         private static async Task<List<string>> GetCsProperties(SemanticModel semanticModel, TypeSyntax type, CancellationToken cancellationToken)
         {
-            var symbolInfo = semanticModel.GetSymbolInfo(type, cancellationToken);
+            var correctSemanticModel = semanticModel.Compilation.GetSemanticModel(type.SyntaxTree);
+
+            var symbolInfo = correctSemanticModel.GetSymbolInfo(type, cancellationToken);
 
             if (symbolInfo.Symbol == null)
                 return new List<string>();

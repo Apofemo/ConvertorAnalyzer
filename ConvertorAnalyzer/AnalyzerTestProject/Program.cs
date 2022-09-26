@@ -28,6 +28,7 @@ public record ConvertFrom
 
 public class ConvertTo : ConvertToParent
 {
+    public ChildProp ChildProp { get; set; }
     public int IntProp { get; set; }
     public string StringProp { get; set; } = "StringProp";
     public string CaseSens { get; set; } = "CaseSens";
@@ -38,18 +39,6 @@ public class ConvertTo : ConvertToParent
     public string Prop3 { get; set; } = "Prop3";
 }
 
-public class ConvertToParent : ConvertToParentParent
-{
-    public int IntPropParent { get; set; }
-    public string StringPropParent { get; set; } = "StringProp";
-}
-
-public class ConvertToParentParent : object, System.Runtime.Serialization.IExtensibleDataObject
-{
-    public int IntPropParentParent { get; set; }
-    public string StringPropParentParent { get; set; } = "StringProp";
-    public ExtensionDataObject? ExtensionData { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-}
 
 public abstract class Converter<TFrom, TTo>
 {
