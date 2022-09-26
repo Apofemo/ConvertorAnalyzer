@@ -25,7 +25,7 @@ public record ConvertFrom
     public string MismatchFrom { get; set; } = "MismatchFrom";
 }
 
-public class ConvertTo
+public class ConvertTo : ConvertToParent
 {
     public int IntProp { get; set; }
     public string StringProp { get; set; } = "StringProp";
@@ -37,6 +37,18 @@ public class ConvertTo
     public string Prop3 { get; set; } = "Prop3";
 }
 
+public class ConvertToParent : ConvertToParentParent
+{
+    public int IntPropParent { get; set; }
+    public string StringPropParent { get; set; } = "StringProp";
+}
+
+public class ConvertToParentParent
+{
+    public int IntPropParentParent { get; set; }
+    public string StringPropParentParent { get; set; } = "StringProp";
+}
+
 public abstract class Converter<TFrom, TTo>
 {
     //public abstract void TestScenario(TFrom expected, TTo tested);
@@ -46,6 +58,7 @@ public class Test1 : Converter<ConvertFrom, ConvertTo>
 {
 
 }
+
 public class Test2 : Converter<Msg.PhoneCall, ConvertTo>
 {
 

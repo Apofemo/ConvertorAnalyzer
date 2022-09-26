@@ -46,17 +46,14 @@ namespace ConvertorAnalyzer
         {
             var statement = root.FindNode(diagnostic.Location.SourceSpan) as TypeArgumentListSyntax;
 
-            if (statement == null)
-                return null;
-
-            var nodeToChange = statement
+            var nodeToChange = statement?
                 .Parent?
                 .Parent?
                 .Parent?
                 .Parent?
                 .DescendantNodesAndSelf()
-                .FirstOrDefault(node => node is ClassDeclarationSyntax || node is RecordDeclarationSyntax)
-                as ClassDeclarationSyntax;
+                .FirstOrDefault(node => node is BaseTypeDeclarationSyntax)
+                as BaseTypeDeclarationSyntax;
 
             if (nodeToChange == null)
                 return null;
@@ -80,11 +77,11 @@ namespace ConvertorAnalyzer
             {
                 case IdentifierNameSyntax _:
                     fromClassName = ((IdentifierNameSyntax)statement.Arguments[0]).Identifier.Text;
-                    fromPropNames = await GetCsProps(semanticModel, statement.Arguments[0]);
+                    fromPropNames = await GetCsProperties(semanticModel, statement.Arguments[0]);
                     break;
                 case QualifiedNameSyntax _:
                     fromClassName = statement.Arguments[0].ToFullString();
-                    fromPropNames = GetFsProps(semanticModel, ((QualifiedNameSyntax)statement.Arguments[0]).Right);
+                    fromPropNames = GetFsProperties(semanticModel, ((QualifiedNameSyntax)statement.Arguments[0]).Right);
                     break;
             }
 
@@ -92,11 +89,11 @@ namespace ConvertorAnalyzer
             {
                 case IdentifierNameSyntax _:
                     toClassName = ((IdentifierNameSyntax)statement.Arguments[1]).Identifier.Text;
-                    toPropNames = await GetCsProps(semanticModel, statement.Arguments[1]);
+                    toPropNames = await GetCsProperties(semanticModel, statement.Arguments[1]);
                     break;
                 case QualifiedNameSyntax _:
                     toClassName = statement.Arguments[1].ToFullString();
-                    toPropNames = GetFsProps(semanticModel, statement.Arguments[1]);
+                    toPropNames = GetFsProperties(semanticModel, statement.Arguments[1]);
                     break;
             }
 
@@ -170,55 +167,45 @@ namespace ConvertorAnalyzer
             return editor.GetChangedDocument();
         }
 
-        private static async Task<List<string>> GetCsProps(SemanticModel semanticModel, TypeSyntax type)
+        private static async Task<List<string>> GetCsProperties(SemanticModel semanticModel, TypeSyntax type)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(type);
 
             if (symbolInfo.Symbol == null)
                 return default;
 
-            var classDeclarationSyntax = await symbolInfo
-                .Symbol
-                .DeclaringSyntaxReferences
-                .FirstOrDefault()
-                .GetSyntaxAsync()
-                as ClassDeclarationSyntax;
-
-            if (classDeclarationSyntax == null)
-            {
-                var recordDeclarationSyntax = await symbolInfo
+            var declarationSyntax = await symbolInfo
                     .Symbol
                     .DeclaringSyntaxReferences
                     .FirstOrDefault()
                     .GetSyntaxAsync()
-                    as RecordDeclarationSyntax;
+                as BaseTypeDeclarationSyntax;
 
-                if (recordDeclarationSyntax == null)
-                    return default;
+            if (declarationSyntax == null)
+                return default;
 
-                var recordPropertyDeclaration = recordDeclarationSyntax
-                    .DescendantNodes()
-                    .OfType<PropertyDeclarationSyntax>();
-
-                var recordResult = recordPropertyDeclaration
-                    .Select(property => property.Identifier.Text)
-                    .ToList();
-
-                return recordResult;
-            }
-
-            var classPropertyDeclaration = classDeclarationSyntax
+            var propertyDeclaration = declarationSyntax
                 .DescendantNodes()
                 .OfType<PropertyDeclarationSyntax>();
 
-            var classResult = classPropertyDeclaration
+            var result = propertyDeclaration
                 .Select(property => property.Identifier.Text)
                 .ToList();
 
-            return classResult;
-        }
+            var parentType = declarationSyntax
+                .BaseList?
+                .Types
+                .FirstOrDefault()?
+                .Type;
 
-        private static List<string> GetFsProps(SemanticModel semanticModel, TypeSyntax type)
+            if (parentType != null)
+            {
+                result.AddRange(await GetCsProperties(semanticModel, parentType));
+            }
+
+            return result;
+        }
+        private static List<string> GetFsProperties(SemanticModel semanticModel, TypeSyntax type)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(type);
 
@@ -239,7 +226,7 @@ namespace ConvertorAnalyzer
             return memberNames;
         }
 
-        private static IEnumerable<StatementSyntax> GetAssertBlockSyntax(List<string> fromProps, List<string> toProps)
+        private static IEnumerable<StatementSyntax> GetAssertBlockSyntax(List<string> fromProperties, List<string> toProperties)
         {
             var result = new List<StatementSyntax>
             {
@@ -247,16 +234,16 @@ namespace ConvertorAnalyzer
                 GetAssertNotNullSyntax("expected"),
             };
 
-            foreach (var from in fromProps)
+            foreach (var from in fromProperties)
             {
-                var to = toProps.FirstOrDefault(toProp => toProp.Equals(from, StringComparison.OrdinalIgnoreCase))
-                         ?? toProps.FirstOrDefault(toProp => toProp.IndexOf(from, StringComparison.OrdinalIgnoreCase) > -1
+                var to = toProperties.FirstOrDefault(toProp => toProp.Equals(from, StringComparison.OrdinalIgnoreCase))
+                         ?? toProperties.FirstOrDefault(toProp => toProp.IndexOf(from, StringComparison.OrdinalIgnoreCase) > -1
                                                              || from.IndexOf(toProp, StringComparison.OrdinalIgnoreCase) > -1);
 
                 if (to == null)
                     to = "/*unexpected mismatch*/";
                 else
-                    toProps.Remove(to);
+                    toProperties.Remove(to);
 
                 result.Add(SyntaxFactory.ExpressionStatement(
                             SyntaxFactory.InvocationExpression(
@@ -292,9 +279,9 @@ namespace ConvertorAnalyzer
                                         })))));
             }
 
-            if (toProps.Any())
+            if (toProperties.Any())
             {
-                foreach (var toProp in toProps)
+                foreach (var toProp in toProperties)
                 {
                     result.Add(SyntaxFactory.ExpressionStatement(
                             SyntaxFactory.InvocationExpression(
