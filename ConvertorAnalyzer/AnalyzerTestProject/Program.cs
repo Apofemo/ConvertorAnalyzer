@@ -40,17 +40,17 @@ public class ConvertTo : ConvertToParent
 }
 
 
-public abstract class Converter<TFrom, TTo>
+public abstract class ConverterTest<TFrom, TTo>
 {
     //public abstract void TestScenario(TFrom expected, TTo tested);
 }
 
-public class Test1 : Converter<ConvertFrom, ConvertTo>
+public class Test1 : ConverterTest<ConvertFrom, ConvertTo>
 {
 
 }
 
-public class Test2 : Converter<Msg.PhoneCall, ConvertTo>
+public class Test2 : ConverterTest<Msg.PhoneCall, ConvertTo>
 {
 
 }

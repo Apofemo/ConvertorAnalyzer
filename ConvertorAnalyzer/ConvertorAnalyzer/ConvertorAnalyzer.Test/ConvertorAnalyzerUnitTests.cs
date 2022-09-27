@@ -1,8 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 using VerifyCS = ConvertorAnalyzer.Test.CSharpCodeFixVerifier<
-    ConvertorAnalyzer.ConvertorAnalyzerAnalyzer,
-    ConvertorAnalyzer.ConvertorAnalyzerCodeFixProvider>;
+    ConvertorAnalyzer.ConverterTestAnalyzerAnalyzer,
+    ConvertorAnalyzer.ConverterTestAnalyzerCodeFixProvider>;
 
 namespace ConvertorAnalyzer.Test
 {

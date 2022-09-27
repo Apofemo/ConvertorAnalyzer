@@ -14,23 +14,20 @@ using System.Threading.Tasks;
 
 namespace ConvertorAnalyzer
 {
-    [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(ConvertorAnalyzerCodeFixProvider)), Shared]
-    public class ConvertorAnalyzerCodeFixProvider : CodeFixProvider
+    [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(ConverterTestAnalyzerCodeFixProvider)), Shared]
+    public class ConverterTestAnalyzerCodeFixProvider : CodeFixProvider
     {
         public sealed override ImmutableArray<string> FixableDiagnosticIds
-        {
-            get { return ImmutableArray.Create(ConvertorAnalyzerAnalyzer.DiagnosticId); }
-        }
+             => ImmutableArray.Create(ConverterTestAnalyzerAnalyzer.DiagnosticId);
 
         public sealed override FixAllProvider GetFixAllProvider()
-        {
-            // See https://github.com/dotnet/roslyn/blob/main/docs/analyzers/FixAllProvider.md for more information on Fix All Providers
-            return WellKnownFixAllProviders.BatchFixer;
-        }
+            => WellKnownFixAllProviders.BatchFixer;
 
         public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
+
+            var solution = context.Document.Project.Solution;
 
             var diagnostic = context.Diagnostics.First();
 
@@ -38,12 +35,12 @@ namespace ConvertorAnalyzer
             context.RegisterCodeFix(
                 CodeAction.Create(
                     title: CodeFixResources.CodeFixTitle,
-                    createChangedDocument: c => GenerateAsserts(context.Document, diagnostic, root, c),
+                    createChangedDocument: c => GenerateAsserts(context.Document, solution, diagnostic, root, c),
                     equivalenceKey: nameof(CodeFixResources.CodeFixTitle)),
                 diagnostic);
         }
 
-        private async Task<Document> GenerateAsserts(Document document, Diagnostic diagnostic, SyntaxNode root, CancellationToken cancellationToken)
+        private async Task<Document> GenerateAsserts(Document document, Solution solution, Diagnostic diagnostic, SyntaxNode root, CancellationToken cancellationToken)
         {
             var statement = root.FindNode(diagnostic.Location.SourceSpan) as TypeArgumentListSyntax;
 
@@ -76,25 +73,27 @@ namespace ConvertorAnalyzer
 
             switch (statement.Arguments[0])
             {
-                case IdentifierNameSyntax _:
-                    fromClassName = ((IdentifierNameSyntax)statement.Arguments[0]).Identifier.Text;
-                    fromPropNames = await GetCsProperties(semanticModel, statement.Arguments[0], cancellationToken);
+                case IdentifierNameSyntax argument:
+                    fromClassName = argument.Identifier.Text;
+                    fromPropNames = await GetCsProperties(solution, argument, cancellationToken);
                     break;
-                case QualifiedNameSyntax _:
-                    fromClassName = statement.Arguments[0].ToFullString();
-                    fromPropNames = GetFsProperties(semanticModel, ((QualifiedNameSyntax)statement.Arguments[0]).Right);
+
+                case QualifiedNameSyntax argument:
+                    fromClassName = argument.ToFullString();
+                    fromPropNames = GetFsProperties(semanticModel, argument.Right);
                     break;
             }
 
             switch (statement.Arguments[1])
             {
-                case IdentifierNameSyntax _:
-                    toClassName = ((IdentifierNameSyntax)statement.Arguments[1]).Identifier.Text;
-                    toPropNames = await GetCsProperties(semanticModel, statement.Arguments[1], cancellationToken);
+                case IdentifierNameSyntax argument:
+                    toClassName = argument.Identifier.Text;
+                    toPropNames = await GetCsProperties(solution, argument, cancellationToken);
                     break;
-                case QualifiedNameSyntax _:
-                    toClassName = statement.Arguments[1].ToFullString();
-                    toPropNames = GetFsProperties(semanticModel, statement.Arguments[1]);
+
+                case QualifiedNameSyntax argument:
+                    toClassName = argument.ToFullString();
+                    toPropNames = GetFsProperties(semanticModel, argument.Right);
                     break;
             }
 
@@ -128,7 +127,7 @@ namespace ConvertorAnalyzer
                                     SyntaxFactory.MethodDeclaration(
                                             SyntaxFactory.PredefinedType(
                                                 SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
-                                            SyntaxFactory.Identifier(ConvertorAnalyzerAnalyzer.MethodName))
+                                            SyntaxFactory.Identifier("TestScenario"))
                                         .WithModifiers(
                                             SyntaxFactory.TokenList(
                                                 SyntaxFactory.Token(SyntaxKind.PublicKeyword),
@@ -168,9 +167,14 @@ namespace ConvertorAnalyzer
             return editor.GetChangedDocument();
         }
 
-        private static async Task<List<string>> GetCsProperties(SemanticModel semanticModel, TypeSyntax type, CancellationToken cancellationToken)
+        private static async Task<List<string>> GetCsProperties(Solution solution, TypeSyntax type, CancellationToken cancellationToken)
         {
-            var correctSemanticModel = semanticModel.Compilation.GetSemanticModel(type.SyntaxTree);
+            var document = solution.GetDocument(type.SyntaxTree);
+
+            if (document == null)
+                return new List<string>();
+
+            var correctSemanticModel = await document.GetSemanticModelAsync(cancellationToken);
 
             var symbolInfo = correctSemanticModel.GetSymbolInfo(type, cancellationToken);
 
@@ -178,9 +182,9 @@ namespace ConvertorAnalyzer
                 return new List<string>();
 
             var declarationSyntaxReference = symbolInfo
-                    .Symbol
-                    .DeclaringSyntaxReferences
-                    .FirstOrDefault();
+                .Symbol
+                .DeclaringSyntaxReferences
+                .FirstOrDefault();
 
             if (declarationSyntaxReference == null)
                 return new List<string>();
@@ -208,11 +212,20 @@ namespace ConvertorAnalyzer
 
             if (parentType != null)
             {
-                result.AddRange(await GetCsProperties(semanticModel, parentType, cancellationToken));
+                switch (parentType)
+                {
+                    case IdentifierNameSyntax _:
+                        result.AddRange(await GetCsProperties(solution, parentType, cancellationToken));
+                        break;
+                    case QualifiedNameSyntax parentSyntax:
+                        result.AddRange(await GetCsProperties(solution, parentSyntax.Right, cancellationToken));
+                        break;
+                }
             }
 
             return result;
         }
+
         private static List<string> GetFsProperties(SemanticModel semanticModel, TypeSyntax type)
         {
             var symbolInfo = semanticModel.GetSymbolInfo(type);
