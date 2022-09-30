@@ -148,8 +148,7 @@ namespace ConvertorAnalyzer
                                                                 SyntaxFactory.IdentifierName(toClassName))
                                                     })))
                                         .WithBody(
-                                            SyntaxFactory.Block(GetAssertBlockSyntax(fromPropNames, toPropNames)))))))
-                .NormalizeWhitespace();
+                                            SyntaxFactory.Block(GetAssertBlockSyntax(fromPropNames, toPropNames)))))));
 
             var newNode = (await newTree
                     .SyntaxTree
@@ -201,7 +200,13 @@ namespace ConvertorAnalyzer
                 .OfType<PropertyDeclarationSyntax>();
 
             var result = propertyDeclaration
-                .Select(property => property.Identifier.Text)
+                .Select(property =>
+                {
+                    if (property.Type.DescendantNodes().Any(node => node is TypeArgumentListSyntax))
+                        return property.Identifier.Text + "/*Collection*/";
+
+                    return property.Identifier.Text;
+                })
                 .ToList();
 
             var parentType = declarationSyntax
@@ -253,6 +258,7 @@ namespace ConvertorAnalyzer
             {
                 GetAssertNotNullSyntax("tested"),
                 GetAssertNotNullSyntax("expected"),
+                NewLine()
             };
 
             foreach (var from in fromProperties)
@@ -266,24 +272,55 @@ namespace ConvertorAnalyzer
                 else
                     toProperties.Remove(to);
 
-                result.Add(SyntaxFactory.ExpressionStatement(
-                            SyntaxFactory.InvocationExpression(
-                                SyntaxFactory.MemberAccessExpression(
-                                    SyntaxKind.SimpleMemberAccessExpression,
-                                    SyntaxFactory.IdentifierName("Assert"),
-                                    SyntaxFactory.IdentifierName("That")))
-                            .WithArgumentList(
-                                SyntaxFactory.ArgumentList(
-                                    SyntaxFactory.SeparatedList<ArgumentSyntax>(
-                                        new SyntaxNodeOrToken[]{
-                                        SyntaxFactory.Argument(
-                                            SyntaxFactory.MemberAccessExpression(
-                                                SyntaxKind.SimpleMemberAccessExpression,
-                                                SyntaxFactory.IdentifierName("tested"),
-                                                SyntaxFactory.IdentifierName(to))),
-                                        SyntaxFactory.Token(SyntaxKind.CommaToken),
-                                        SyntaxFactory.Argument(
-                                            SyntaxFactory.InvocationExpression(
+                if (from.Contains("/*Collection*/"))
+                {
+                    result.Add(NewLine());
+                    result.Add(GetAssertNotNullSyntax("expected." + from.Replace("/*Collection*/", string.Empty)));
+                    result.Add(GetAssertCountSyntax(from, to));
+                }
+                else
+                    result.Add(GetAssertPropertySyntax(from, to));
+            }
+
+            if (toProperties.Any())
+            {
+                foreach (var to in toProperties)
+                {
+
+                    if (to.Contains("/*Collection*/"))
+                    {
+                        result.Add(NewLine());
+                        result.Add(GetAssertNotNullSyntax("tested." + to.Replace("/*Collection*/", string.Empty)));
+                        result.Add(GetAssertCountSyntax("/*unexpected mismatch*/", to));
+                    }
+                    else
+                        result.Add(GetAssertPropertySyntax(to, "/*unexpected mismatch*/"));
+                }
+            }
+
+            return result;
+        }
+
+        private static StatementSyntax GetAssertPropertySyntax(string from, string to)
+            => SyntaxFactory.ExpressionStatement(
+                SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.MemberAccessExpression(
+                            SyntaxKind.SimpleMemberAccessExpression,
+                            SyntaxFactory.IdentifierName("Assert"),
+                            SyntaxFactory.IdentifierName("That")))
+                    .WithArgumentList(
+                        SyntaxFactory.ArgumentList(
+                            SyntaxFactory.SeparatedList<ArgumentSyntax>(
+                                new SyntaxNodeOrToken[]
+                                {
+                                    SyntaxFactory.Argument(
+                                        SyntaxFactory.MemberAccessExpression(
+                                            SyntaxKind.SimpleMemberAccessExpression,
+                                            SyntaxFactory.IdentifierName("tested"),
+                                            SyntaxFactory.IdentifierName(to))),
+                                    SyntaxFactory.Token(SyntaxKind.CommaToken),
+                                    SyntaxFactory.Argument(
+                                        SyntaxFactory.InvocationExpression(
                                                 SyntaxFactory.MemberAccessExpression(
                                                     SyntaxKind.SimpleMemberAccessExpression,
                                                     SyntaxFactory.IdentifierName("Is"),
@@ -297,31 +334,31 @@ namespace ConvertorAnalyzer
                                                                 SyntaxFactory.IdentifierName("expected"),
                                                                 SyntaxFactory.IdentifierName(from)))))))
 
-                                        })))));
-            }
+                                }))));
 
-            if (toProperties.Any())
-            {
-                foreach (var toProp in toProperties)
-                {
-                    result.Add(SyntaxFactory.ExpressionStatement(
-                            SyntaxFactory.InvocationExpression(
-                                SyntaxFactory.MemberAccessExpression(
-                                    SyntaxKind.SimpleMemberAccessExpression,
-                                    SyntaxFactory.IdentifierName("Assert"),
-                                    SyntaxFactory.IdentifierName("That")))
-                            .WithArgumentList(
-                                SyntaxFactory.ArgumentList(
-                                    SyntaxFactory.SeparatedList<ArgumentSyntax>(
-                                        new SyntaxNodeOrToken[]{
-                                        SyntaxFactory.Argument(
+        private static StatementSyntax GetAssertCountSyntax(string from, string to)
+            => SyntaxFactory.ExpressionStatement(
+                SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.MemberAccessExpression(
+                            SyntaxKind.SimpleMemberAccessExpression,
+                            SyntaxFactory.IdentifierName("Assert"),
+                            SyntaxFactory.IdentifierName("That")))
+                    .WithArgumentList(
+                        SyntaxFactory.ArgumentList(
+                            SyntaxFactory.SeparatedList<ArgumentSyntax>(
+                                new SyntaxNodeOrToken[]
+                                {
+                                    SyntaxFactory.Argument(
+                                        SyntaxFactory.MemberAccessExpression(
+                                            SyntaxKind.SimpleMemberAccessExpression,
                                             SyntaxFactory.MemberAccessExpression(
                                                 SyntaxKind.SimpleMemberAccessExpression,
                                                 SyntaxFactory.IdentifierName("tested"),
-                                                SyntaxFactory.IdentifierName(toProp))),
-                                        SyntaxFactory.Token(SyntaxKind.CommaToken),
-                                        SyntaxFactory.Argument(
-                                            SyntaxFactory.InvocationExpression(
+                                                SyntaxFactory.IdentifierName(to.Replace("/*Collection*/", string.Empty))),
+                                            SyntaxFactory.IdentifierName("Length"))),
+                                    SyntaxFactory.Token(SyntaxKind.CommaToken),
+                                    SyntaxFactory.Argument(
+                                        SyntaxFactory.InvocationExpression(
                                                 SyntaxFactory.MemberAccessExpression(
                                                     SyntaxKind.SimpleMemberAccessExpression,
                                                     SyntaxFactory.IdentifierName("Is"),
@@ -332,15 +369,13 @@ namespace ConvertorAnalyzer
                                                         SyntaxFactory.Argument(
                                                             SyntaxFactory.MemberAccessExpression(
                                                                 SyntaxKind.SimpleMemberAccessExpression,
-                                                                SyntaxFactory.IdentifierName("expected"),
-                                                                SyntaxFactory.IdentifierName("/*unexpected mismatch*/")))))))
+                                                                SyntaxFactory.MemberAccessExpression(
+                                                                    SyntaxKind.SimpleMemberAccessExpression,
+                                                                    SyntaxFactory.IdentifierName("expected"),
+                                                                    SyntaxFactory.IdentifierName(from.Replace("/*Collection*/", string.Empty))),
+                                                                SyntaxFactory.IdentifierName("Count")))))))
 
-                                        })))));
-                }
-            }
-
-            return result;
-        }
+                                }))));
 
         private static StatementSyntax GetAssertNotNullSyntax(string name)
             => SyntaxFactory.ExpressionStatement(
@@ -366,5 +401,11 @@ namespace ConvertorAnalyzer
                                                     SyntaxFactory.IdentifierName("Not")),
                                                 SyntaxFactory.IdentifierName("Null")))
                                     }))));
+
+        private static StatementSyntax NewLine()
+            => SyntaxFactory.ExpressionStatement(
+                    SyntaxFactory.IdentifierName("\n\t\t"))
+                .WithSemicolonToken(
+                    SyntaxFactory.MissingToken(SyntaxKind.SemicolonToken));
     }
 }
