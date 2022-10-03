@@ -80,7 +80,7 @@ namespace ConvertorAnalyzer
 
                 case QualifiedNameSyntax argument:
                     fromClassName = argument.ToFullString();
-                    fromPropNames = GetFsProperties(semanticModel, argument.Right);
+                    fromPropNames = await GetFsProperties(solution, argument.Right, cancellationToken);
                     break;
             }
 
@@ -93,7 +93,7 @@ namespace ConvertorAnalyzer
 
                 case QualifiedNameSyntax argument:
                     toClassName = argument.ToFullString();
-                    toPropNames = GetFsProperties(semanticModel, argument.Right);
+                    toPropNames = await GetFsProperties(solution, argument.Right, cancellationToken);
                     break;
             }
 
@@ -231,9 +231,19 @@ namespace ConvertorAnalyzer
             return result;
         }
 
-        private static List<string> GetFsProperties(SemanticModel semanticModel, TypeSyntax type)
+        private static async Task<List<string>> GetFsProperties(Solution solution, TypeSyntax type, CancellationToken cancellationToken)
         {
-            var symbolInfo = semanticModel.GetSymbolInfo(type);
+            var document = solution.GetDocument(type.SyntaxTree);
+
+            if (document == null)
+                return new List<string>();
+
+            var correctSemanticModel = await document.GetSemanticModelAsync(cancellationToken);
+
+            if (correctSemanticModel == null)
+                return new List<string>();
+
+            var symbolInfo = correctSemanticModel.GetSymbolInfo(type);
 
             if (symbolInfo.Symbol == null)
                 return new List<string>();
